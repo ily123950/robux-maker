@@ -19,4 +19,4 @@ WORKDIR /usr/src/app
 COPY . .
 
 # Указываем команду для запуска скрипта
-CMD ["python", "main.py"
+CMD ["python", "main.py"]
