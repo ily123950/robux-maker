@@ -2,21 +2,30 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import time
 
-# Настройка опций для работы в headless режиме
-chrome_options = Options()
-chrome_options.add_argument('--headless')  # Без графического интерфейса
-chrome_options.add_argument('--no-sandbox')
-chrome_options.add_argument('--disable-dev-shm-usage')
+try:
+    # Настройка опций для работы в headless режиме
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')  # Без графического интерфейса
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
 
-# Настроим Selenium для использования с ChromeDriver
-driver = webdriver.Chrome(options=chrome_options)
+    # Настроим Selenium для использования с ChromeDriver
+    driver = webdriver.Chrome(options=chrome_options)
 
-# Открываем сайт
-driver.get("https://www.youtube.com")
-print(driver.title)  # Печатаем заголовок страницы
+    # Открываем сайт
+    driver.get("https://www.youtube.com")
 
-# Даем время на выполнение
-time.sleep(3)
+    # Печатаем заголовок страницы
+    title = driver.title
+    print(f"Title: {title}")
 
-# Закрываем браузер
-driver.quit()
+    # Выводим сообщение об успешном выполнении
+    print("Success!")
+    
+except Exception as e:
+    # Если возникает ошибка, выводим ее
+    print(f"An error occurred: {e}")
+
+finally:
+    # Закрываем браузер
+    driver.quit()
