@@ -10,7 +10,6 @@ from selenium.common.exceptions import TimeoutException
 
 # Настройки для headless режима
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # Без графического интерфейса
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
@@ -44,7 +43,13 @@ except Exception as e:
     exit()
 
 # Перезагружаем сайт, чтобы cookies применились
+driver.get("https://www.youtube.com")
+time.sleep(5)
 
+# Делаем скриншот страницы
+screenshot_path = "screenshot_after_login.png"
+driver.save_screenshot(screenshot_path)
+print(f"Screenshot saved at {screenshot_path}. Please check if the account is logged in.")
 
 # Проверка авторизации
 print("Checking login status...")
