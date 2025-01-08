@@ -108,34 +108,36 @@ except TimeoutException:
 
 time.sleep(5)  # Ждем, пока откроется видео
 
-# Открываем чат и пишем сообщения
+# Работа с комментариями
 try:
-    print("Attempting to open the chat...")
-    chat_button = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.XPATH, '//*[@id="chat"]'))
+    print("Waiting for the comment box to be visible...")
+    # Ожидание появления раздела комментариев
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_element_located((By.ID, "comment-section-renderer"))
     )
-    print("Chat is available. Scrolling into view...")
-    driver.execute_script("arguments[0].scrollIntoView(true);", chat_button)  # Прокрутка к чату
-    time.sleep(2)  # Ждем после прокрутки
-    
-    # Пишем сообщения в чат каждые 3 секунды в течение 5 минут
-    end_time = time.time() + 300  # 5 минут
-    while time.time() < end_time:
-        try:
-            print("Finding chat input...")
-            chat_input = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
-            )
-            chat_input.send_keys("gamernoobikyt")  # Ваше сообщение
-            chat_input.send_keys(Keys.RETURN)
-            print("Message sent: gamernoobikyt")
-            time.sleep(3)  # Ждем 3 секунды
-        except Exception as e:
-            print(f"Error sending message: {e}")
-            break
 
-    print("Finished sending messages.")
+    # Активация поля для комментариев
+    comment_box = driver.find_element(By.XPATH, "//div[@id='comment-section-renderer']/div/div[2]/div")
+    comment_box.click()
+    print("Comment box activated.")
+
+    # Ввод сообщения
+    comment_input = WebDriverWait(driver, 15).until(
+        EC.presence_of_element_located((By.XPATH, '//*[@id="comment-simplebox"]/div[1]'))
+    )
+    comment_input.send_keys("gamernoobikyt")  # Ваше сообщение
+    comment_input.send_keys(Keys.ENTER + Keys.ENTER)
+    print("Message entered.")
+
+    # Нажатие кнопки отправки комментария
+    post_button = WebDriverWait(driver, 15).until(
+        EC.element_to_be_clickable((By.XPATH, '//*[@id="comment-simplebox"]/div[3]/button[2]'))
+    )
+    post_button.click()
+    print("Comment posted.")
+
 except Exception as e:
-    print(f"Error interacting with the chat: {e}")
+    print(f"Error interacting with the comment box: {e}")
+
 finally:
     driver.quit()
