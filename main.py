@@ -74,11 +74,16 @@ wait_for_page_load()
 
 # Получаем ссылку на первый стрим
 try:
-    print("Getting URL of the first stream...")
-    first_stream_link = WebDriverWait(driver, 20).until(
+    print("Waiting for the first video to appear...")
+    first_stream_element = WebDriverWait(driver, 20).until(
         EC.visibility_of_element_located((By.XPATH, '//*[@id="video-title"]'))
-    ).get_attribute("href")
+    )
+    
+    # Получаем ссылку на первый стрим
+    first_stream_link = first_stream_element.get_attribute("href")
+    first_stream_title = first_stream_element.get_attribute("title")  # Получаем название первого стрима
     print(f"First stream URL: {first_stream_link}")
+    print(f"First stream Title: {first_stream_title}")
     
     # Переходим по ссылке
     driver.get(first_stream_link)
