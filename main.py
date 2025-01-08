@@ -10,7 +10,7 @@ from selenium.common.exceptions import TimeoutException
 
 # Настройка опций для работы в headless режиме
 chrome_options = Options()
-chrome_options.add_argument('--headless')
+chrome_options.add_argument('--headless')  # Без графического интерфейса
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--disable-dev-shm-usage')
 
@@ -26,8 +26,10 @@ print("Loading cookies...")
 with open("cookies.json", "r") as file:
     cookie_data = json.load(file)
     cookies = cookie_data['cookies']
+    
+    # Перед добавлением cookies убедимся, что мы находимся на правильном домене
     for cookie in cookies:
-        if cookie['domain'] == '.youtube.com':
+        if cookie['domain'] == '.youtube.com':  # Убедитесь, что домен совпадает
             cookie_dict = {
                 'name': cookie['name'],
                 'value': cookie['value'],
@@ -39,69 +41,78 @@ with open("cookies.json", "r") as file:
             driver.add_cookie(cookie_dict)
 
 print("Cookies loaded successfully.")
-time.sleep(2)
+time.sleep(2)  # Даем время для применения cookies
+
+# Переходим на сайт YouTube (снова), чтобы cookies были применены
 driver.get("https://www.youtube.com")
-time.sleep(3)
+time.sleep(3)  # Ждем, пока страница прогрузится после добавления cookies
 
-# Проверка авторизации
-def check_authorization(driver):
+# Функция для ожидания загрузки страницы
+def wait_for_page_load():
     try:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.TAG_NAME, 'ytd-masthead'))
         )
-        print("User is logged in.")
-        return True
+        print("Page loaded successfully.")
     except TimeoutException:
-        print("User is not logged in.")
-        return False
+        print("Page did not load in time.")
 
-if not check_authorization(driver):
-    print("Authorization failed. Please ensure your cookies are valid.")
-    driver.quit()
-    exit()
+# Ждем, пока YouTube загрузится
+print("Waiting for YouTube page to load...")
+wait_for_page_load()
 
-# Ищем и открываем первый стрим
+# Ищем "Pls donate roblox live"
 print("Searching for 'Pls donate roblox live'...")
 search_box = driver.find_element(By.NAME, "search_query")
 search_box.send_keys("Pls donate roblox live")
 search_box.send_keys(Keys.RETURN)
-time.sleep(3)
+print("Search initiated.")
+time.sleep(3)  # Ждем загрузки результатов
 
-try:
-    first_stream = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.XPATH, '//a[@id="video-title"]'))
-    )
-    first_stream_title = first_stream.get_attribute('title')
-    first_stream_url = first_stream.get_attribute('href')
-    print(f"First stream title: {first_stream_title}")
-    print(f"First stream URL: {first_stream_url}")
+# Ждем загрузки страницы с результатами поиска
+wait_for_page_load()
 
-    driver.get(first_stream_url)
-    print("Opened the first stream.")
-except TimeoutException:
-    print("First stream not found.")
-    driver.quit()
-    exit()
+# Ожидаем, пока первый стрим станет видимым
+print("Waiting for the first stream link to be visible...")
+first_stream = WebDriverWait(driver, 20).until(
+    EC.visibility_of_element_located((By.XPATH, '//*[@id="video-title"]'))
+)
 
-time.sleep(5)
+# Получаем ссылку на первый стрим
+first_stream_title = first_stream.text
+first_stream_url = first_stream.get_attribute('href')
 
-# Прокрутка до поля для ввода комментариев и ввод текста
-try:
-    print("Locating comment box...")
-    comment_box = WebDriverWait(driver, 15).until(
-        EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
-    )
-    driver.execute_script("arguments[0].scrollIntoView(true);", comment_box)
-    print("Scrolled to comment box.")
+print(f"First stream title: {first_stream_title}")
+print(f"First stream URL: {first_stream_url}")
 
-    # Ввод сообщения
-    comment_box.send_keys("gamernoobikyt")
-    comment_box.send_keys(Keys.RETURN)
-    print("Comment posted.")
-except TimeoutException:
-    print("Comment box not found.")
-except Exception as e:
-    print(f"Error interacting with comment box: {e}")
+# Переходим по ссылке первого стрима
+driver.get(first_stream_url)
+time.sleep(5)  # Ждем, пока стрим откроется
 
-# Завершаем работу
+# Ожидаем появления блока для комментирования
+print("Waiting for comment box...")
+WebDriverWait(driver, 15).until(
+    EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
+)
+
+# Пишем сообщение в чат
+comment_box = driver.find_element(By.XPATH, '//*[@id="input"]')
+comment_box.send_keys("gamernoobikyt")  # Ваше сообщение
+comment_box.send_keys(Keys.RETURN)  # Отправляем сообщение
+print("Message sent: gamernoobikyt")
+
+# Отправляем сообщение каждые 3 секунды в течение 5 минут
+end_time = time.time() + 300  # 5 минут
+print("Sending messages to chat every 3 seconds for 5 minutes.")
+while time.time() < end_time:
+    try:
+        comment_box.send_keys("gamernoobikyt")  # Ваше сообщение
+        comment_box.send_keys(Keys.RETURN)
+        print("Message sent: gamernoobikyt")
+        time.sleep(3)  # Ждем 3 секунды
+    except Exception as e:
+        print(f"Error sending message: {e}")
+        break
+
+print("Finished sending messages.")
 driver.quit()
