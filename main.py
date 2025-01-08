@@ -14,31 +14,37 @@ chrome_options.add_argument('--disable-dev-shm-usage')
 # Настроим Selenium для использования с ChromeDriver
 driver = webdriver.Chrome(options=chrome_options)
 
+# Переходим на сайт YouTube
+driver.get("https://www.youtube.com")
+print("Navigated to YouTube.")
+
 # Логируем загрузку cookies
 print("Loading cookies...")
 with open("cookies.json", "r") as file:
     cookie_data = json.load(file)
     cookies = cookie_data['cookies']
     
+    # Перед добавлением cookies убедимся, что мы находимся на правильном домене
     for cookie in cookies:
-        # Используем только необходимые поля для добавления cookie
-        cookie_dict = {
-            'name': cookie['name'],
-            'value': cookie['value'],
-            'domain': cookie['domain'],
-            'path': cookie.get('path', '/'),
-            'secure': cookie.get('secure', False),
-            'httpOnly': cookie.get('httpOnly', False)
-        }
-        driver.add_cookie(cookie_dict)
+        if cookie['domain'] == '.youtube.com':  # Убедитесь, что домен совпадает
+            cookie_dict = {
+                'name': cookie['name'],
+                'value': cookie['value'],
+                'domain': cookie['domain'],
+                'path': cookie.get('path', '/'),
+                'secure': cookie.get('secure', False),
+                'httpOnly': cookie.get('httpOnly', False)
+            }
+            driver.add_cookie(cookie_dict)
 
 print("Cookies loaded successfully.")
+time.sleep(2)  # Даем время для применения cookies
 
-# Переходим на сайт YouTube
+# Переходим на сайт YouTube (снова), чтобы cookies были применены
 driver.get("https://www.youtube.com")
-print("Navigated to YouTube.")
-time.sleep(2)  # Даем время загрузиться
+time.sleep(3)  # Ждем, пока страница прогрузится после добавления cookies
 
+# Дальше выполняем остальные действия (поиск, выбор стрима и т.д.)
 # Ищем "Pls donate roblox live"
 print("Searching for 'Pls donate roblox live'...")
 search_box = driver.find_element(By.NAME, "search_query")
