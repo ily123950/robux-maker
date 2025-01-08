@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from selenium.common.exceptions import TimeoutException
 
 # Настройки для headless режима
 chrome_options = Options()
@@ -50,15 +50,11 @@ time.sleep(5)
 # Проверка авторизации
 print("Checking login status...")
 try:
-    avatar = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
+    # Проверяем наличие кнопки "Моя библиотека", которая доступна только для авторизованных пользователей
+    library_button = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, '//a[@title="Library"]'))
     )
-    if avatar:
-        print("Logged into the account successfully.")
-    else:
-        print("Not logged in. Please check your cookies.")
-        driver.quit()
-        exit()
+    print("Logged into the account successfully.")
 except TimeoutException:
     print("Login check failed. Please ensure your cookies are valid.")
     driver.quit()
