@@ -88,9 +88,14 @@ try:
         first_stream_url = first_stream.get_attribute('href')
         print(f"First stream URL: {first_stream_url}")  # Выводим ссылку на стрим
         
-        # Переходим по ссылке на первый стрим
+        # Закрываем текущую вкладку
+        driver.close()
+        print("Current tab closed.")
+        
+        # Открываем новую вкладку с полученной ссылкой
+        driver = webdriver.Chrome(options=chrome_options)  # Открываем новый экземпляр браузера
         driver.get(first_stream_url)
-        print("Clicked on the first stream.")
+        print("Opened the first stream in a new tab.")
     else:
         print("First stream title is not available.")
         driver.quit()
