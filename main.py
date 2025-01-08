@@ -72,22 +72,37 @@ time.sleep(3)  # Ждем загрузки результатов
 # Ждем загрузки страницы с результатами поиска
 wait_for_page_load()
 
-# Переходим на первый стрим
-print("Selecting the first stream...")
-first_stream = WebDriverWait(driver, 10).until(
-    EC.visibility_of_element_located((By.XPATH, '//*[@id="video-title"]'))
-)
-first_stream.click()
-print("Clicked on the first stream.")
+# Получаем ссылку на первый стрим
+try:
+    print("Getting URL of the first stream...")
+    first_stream_link = WebDriverWait(driver, 20).until(
+        EC.visibility_of_element_located((By.XPATH, '//*[@id="video-title"]'))
+    ).get_attribute("href")
+    print(f"First stream URL: {first_stream_link}")
+    
+    # Переходим по ссылке
+    driver.get(first_stream_link)
+    print(f"Navigated to first stream: {first_stream_link}")
+except TimeoutException:
+    print("First video link not found.")
+    driver.quit()
+    exit()
+
 time.sleep(5)  # Ждем, пока откроется видео
 
 # Ожидаем, пока кнопка воспроизведения будет видимой, и кликаем на неё
 print("Waiting for the play button to be visible...")
-play_button = WebDriverWait(driver, 10).until(
-    EC.visibility_of_element_located((By.XPATH, "//button[@class='ytp-large-play-button ytp-button']"))
-)
-play_button.click()
-print("Video started playing.")
+try:
+    play_button = WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located((By.XPATH, "//button[@class='ytp-large-play-button ytp-button']"))
+    )
+    play_button.click()
+    print("Video started playing.")
+except TimeoutException:
+    print("Play button not found or not clickable.")
+    driver.quit()
+    exit()
+
 time.sleep(5)  # Даем время для начала воспроизведения
 
 # Открываем чат, если он скрыт
