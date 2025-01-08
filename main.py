@@ -114,15 +114,18 @@ try:
     chat_button = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="chat"]'))
     )
-    print("Chat is available. Starting to send messages...")
-    time.sleep(2)  # Ждем, пока чат откроется
+    print("Chat is available. Scrolling into view...")
+    driver.execute_script("arguments[0].scrollIntoView(true);", chat_button)  # Прокрутка к чату
+    time.sleep(2)  # Ждем после прокрутки
     
     # Пишем сообщения в чат каждые 3 секунды в течение 5 минут
     end_time = time.time() + 300  # 5 минут
     while time.time() < end_time:
         try:
             print("Finding chat input...")
-            chat_input = driver.find_element(By.XPATH, '//*[@id="input"]')
+            chat_input = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
+            )
             chat_input.send_keys("gamernoobikyt")  # Ваше сообщение
             chat_input.send_keys(Keys.RETURN)
             print("Message sent: gamernoobikyt")
