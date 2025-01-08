@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from selenium.common.exceptions import TimeoutException
 
 # Настройка опций для работы в headless режиме
 chrome_options = Options()
@@ -76,20 +76,26 @@ wait_for_page_load()
 try:
     print("Waiting for the first video link to be visible...")
     first_stream = WebDriverWait(driver, 20).until(
-        EC.visibility_of_element_located((By.XPATH, '//*[@id="video-title"]'))
+        EC.presence_of_element_located((By.XPATH, '//a[@id="video-title"]'))
     )
     
     # Извлекаем название первого стрима
     first_stream_title = first_stream.get_attribute('title')
-    print(f"First stream title: {first_stream_title}")  # Выводим название стрима
-    
-    # Извлекаем ссылку на первый стрим
-    first_stream_url = first_stream.get_attribute('href')
-    print(f"First stream URL: {first_stream_url}")  # Выводим ссылку на стрим
-    
-    # Переходим по ссылке на первый стрим
-    driver.get(first_stream_url)
-    print("Clicked on the first stream.")
+    if first_stream_title:
+        print(f"First stream title: {first_stream_title}")  # Выводим название стрима
+        
+        # Извлекаем ссылку на первый стрим
+        first_stream_url = first_stream.get_attribute('href')
+        print(f"First stream URL: {first_stream_url}")  # Выводим ссылку на стрим
+        
+        # Переходим по ссылке на первый стрим
+        driver.get(first_stream_url)
+        print("Clicked on the first stream.")
+    else:
+        print("First stream title is not available.")
+        driver.quit()
+        exit()
+        
 except TimeoutException:
     print("First video link not found or not clickable.")
     driver.quit()
