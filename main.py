@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, TimeoutException
 
 # Настройка опций для работы в headless режиме
 chrome_options = Options()
@@ -59,17 +59,17 @@ time.sleep(3)  # Ждем загрузки результатов
 # Переходим на первый стрим
 print("Selecting the first live stream...")
 try:
-    first_stream = WebDriverWait(driver, 10).until(
+    first_stream = WebDriverWait(driver, 30).until(
         EC.element_to_be_clickable((By.XPATH, '//*[@id="video-title"]'))
     )
     first_stream.click()
     print("Clicked on the video title.")
-except ElementNotInteractableException:
-    print("Couldn't click the title, trying to click the preview image.")
+except TimeoutException:
+    print("Timeout waiting for the first video title, trying to click the preview image.")
     
     # Если не получилось кликнуть на название, пробуем кликнуть на превьюшку
     try:
-        preview_image = WebDriverWait(driver, 10).until(
+        preview_image = WebDriverWait(driver, 30).until(
             EC.element_to_be_clickable((By.XPATH, '//*[@id="thumbnail"]'))
         )
         preview_image.click()
