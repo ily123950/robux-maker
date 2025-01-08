@@ -47,7 +47,27 @@ time.sleep(2)  # Даем время для применения cookies
 driver.get("https://www.youtube.com")
 time.sleep(3)  # Ждем, пока страница прогрузится после добавления cookies
 
-# Дальше выполняем остальные действия (поиск, выбор стрима и т.д.)
+# Функция для ожидания загрузки страницы
+def wait_for_page_load():
+    try:
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.TAG_NAME, 'ytd-masthead'))
+        )
+        print("Page loaded successfully.")
+    except TimeoutException:
+        print("Page did not load in time.")
+
+# Проверяем, вошел ли пользователь и выводим его имя
+print("Checking if logged in...")
+try:
+    profile_icon = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, '//*[@id="avatar-btn"]'))
+    )
+    profile_icon.click()
+    print("Logged in as:", driver.find_element(By.XPATH, '//*[@id="profile-info"]/yt-formatted-string').text)
+except TimeoutException:
+    print("Login info could not be retrieved.")
+
 # Ищем "Pls donate roblox live"
 print("Searching for 'Pls donate roblox live'...")
 search_box = driver.find_element(By.NAME, "search_query")
@@ -56,26 +76,34 @@ search_box.send_keys(Keys.RETURN)
 print("Search initiated.")
 time.sleep(3)  # Ждем загрузки результатов
 
+wait_for_page_load()  # Проверка, что страница загружена перед переходом
+
 # Переходим на первый стрим
 print("Selecting the first live stream...")
+
+# Сначала пробуем кликнуть на превьюшку стрима
+try:
+    preview_image = WebDriverWait(driver, 30).until(
+        EC.element_to_be_clickable((By.XPATH, '//*[@id="thumbnail"]'))
+    )
+    preview_image.click()
+    print("Clicked on the video preview image.")
+    wait_for_page_load()  # Проверка загрузки после клика
+except TimeoutException:
+    print("Timeout waiting for the video preview image, trying another element.")
+
+# Если не удалось кликнуть на превьюшку, пытаемся кликнуть на название видео
 try:
     first_stream = WebDriverWait(driver, 30).until(
         EC.element_to_be_clickable((By.XPATH, '//*[@id="video-title"]'))
     )
+    stream_title = first_stream.text
+    print(f"Selected stream title: {stream_title}")
     first_stream.click()
     print("Clicked on the video title.")
+    wait_for_page_load()  # Проверка загрузки после клика
 except TimeoutException:
-    print("Timeout waiting for the first video title, trying to click the preview image.")
-    
-    # Если не получилось кликнуть на название, пробуем кликнуть на превьюшку
-    try:
-        preview_image = WebDriverWait(driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="thumbnail"]'))
-        )
-        preview_image.click()
-        print("Clicked on the video preview image.")
-    except Exception as e:
-        print(f"Error when trying to click the preview image: {e}")
+    print("Timeout waiting for the video title.")
 
 # Ожидаем загрузки видео
 time.sleep(5)  # Ждем, пока откроется видео
@@ -86,6 +114,7 @@ try:
     chat_button = driver.find_element(By.XPATH, '//*[@id="chat"]/div/div[1]/div[2]/button')
     chat_button.click()
     print("Chat opened.")
+    wait_for_page_load()  # Проверка загрузки после открытия чата
     time.sleep(2)  # Ждем, пока чат откроется
 except NoSuchElementException:
     print("Chat button not found or already opened.")
