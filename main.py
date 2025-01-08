@@ -26,9 +26,9 @@ try:
     print("YouTube loaded successfully.")
 
     # Выполняем поиск с ключевыми словами
-    print("Searching for 'Pls donate roblox live 🔴'...")
+    print("Searching for 'Pls donate roblox live '...")
     search_box = driver.find_element(By.NAME, "search_query")
-    search_box.send_keys("Pls donate roblox live 🔴")
+    search_box.send_keys("roblox pls donate live")
     search_box.send_keys(Keys.RETURN)
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, "//ytd-video-renderer"))
