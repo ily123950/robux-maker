@@ -108,45 +108,31 @@ except TimeoutException:
 
 time.sleep(5)  # Ждем, пока откроется видео
 
-# Ожидаем, пока кнопка воспроизведения будет видимой, и кликаем на неё
-print("Waiting for the play button to be visible...")
-try:
-    play_button = WebDriverWait(driver, 10).until(
-        EC.visibility_of_element_located((By.XPATH, "//button[@class='ytp-large-play-button ytp-button']"))
-    )
-    play_button.click()
-    print("Video started playing.")
-except TimeoutException:
-    print("Play button not found or not clickable.")
-    driver.quit()
-    exit()
-
-time.sleep(5)  # Даем время для начала воспроизведения
-
-# Открываем чат, если он скрыт
+# Открываем чат и пишем сообщения
 try:
     print("Attempting to open the chat...")
-    chat_button = driver.find_element(By.XPATH, '//*[@id="chat"]/div/div[1]/div[2]/button')
-    chat_button.click()
-    print("Chat opened.")
+    chat_button = WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.XPATH, '//*[@id="chat"]'))
+    )
+    print("Chat is available. Starting to send messages...")
     time.sleep(2)  # Ждем, пока чат откроется
+    
+    # Пишем сообщения в чат каждые 3 секунды в течение 5 минут
+    end_time = time.time() + 300  # 5 минут
+    while time.time() < end_time:
+        try:
+            print("Finding chat input...")
+            chat_input = driver.find_element(By.XPATH, '//*[@id="input"]')
+            chat_input.send_keys("gamernoobikyt")  # Ваше сообщение
+            chat_input.send_keys(Keys.RETURN)
+            print("Message sent: gamernoobikyt")
+            time.sleep(3)  # Ждем 3 секунды
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            break
+
+    print("Finished sending messages.")
 except Exception as e:
-    print(f"Error opening chat: {e}")
-
-# Пишем сообщение в чат каждые 3 секунды в течение 5 минут
-end_time = time.time() + 300  # 5 минут
-print("Sending messages to chat every 3 seconds for 5 minutes.")
-while time.time() < end_time:
-    try:
-        print("Finding chat input...")
-        chat_input = driver.find_element(By.XPATH, '//*[@id="input"]')
-        chat_input.send_keys("gamernoobikyt")  # Ваше сообщение
-        chat_input.send_keys(Keys.RETURN)
-        print("Message sent: gamernoobikyt")
-        time.sleep(3)  # Ждем 3 секунды
-    except Exception as e:
-        print(f"Error sending message: {e}")
-        break
-
-print("Finished sending messages.")
-driver.quit()
+    print(f"Error interacting with the chat: {e}")
+finally:
+    driver.quit()
