@@ -30,16 +30,21 @@ try:
     search_box = driver.find_element(By.NAME, "search_query")
     search_box.send_keys("Pls donate")
     search_box.send_keys(Keys.RETURN)
+    time.sleep(5)  # Даем время странице загрузиться
+    print("Search performed.")
 
-    # Ожидаем загрузки результатов поиска
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//ytd-toggle-button-renderer[@id='filter-button']"))
-    )
-    print("Search results loaded.")
+    # Проверяем, есть ли результаты поиска
+    results = driver.find_elements(By.XPATH, "//ytd-video-renderer")
+    if not results:
+        print("No search results found!")
+    else:
+        print(f"Found {len(results)} results.")
 
     # Открываем фильтры и выбираем "Live" (стримы)
     print("Applying filters for live streams...")
-    filter_button = driver.find_element(By.XPATH, "//ytd-toggle-button-renderer[@id='filter-button']")
+    filter_button = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, "//ytd-toggle-button-renderer[@id='filter-button']"))
+    )
     filter_button.click()
 
     live_filter = WebDriverWait(driver, 10).until(
