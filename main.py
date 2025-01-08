@@ -72,24 +72,26 @@ time.sleep(3)  # Ждем загрузки результатов
 # Ждем загрузки страницы с результатами поиска
 wait_for_page_load()
 
-# Получаем ссылку на первый стрим
+# Ищем первый стрим и выводим его название и ссылку
 try:
-    print("Waiting for the first video to appear...")
-    first_stream_element = WebDriverWait(driver, 20).until(
+    print("Waiting for the first video link to be visible...")
+    first_stream = WebDriverWait(driver, 20).until(
         EC.visibility_of_element_located((By.XPATH, '//*[@id="video-title"]'))
     )
     
-    # Получаем ссылку на первый стрим
-    first_stream_link = first_stream_element.get_attribute("href")
-    first_stream_title = first_stream_element.get_attribute("title")  # Получаем название первого стрима
-    print(f"First stream URL: {first_stream_link}")
-    print(f"First stream Title: {first_stream_title}")
+    # Извлекаем название первого стрима
+    first_stream_title = first_stream.get_attribute('title')
+    print(f"First stream title: {first_stream_title}")  # Выводим название стрима
     
-    # Переходим по ссылке
-    driver.get(first_stream_link)
-    print(f"Navigated to first stream: {first_stream_link}")
+    # Извлекаем ссылку на первый стрим
+    first_stream_url = first_stream.get_attribute('href')
+    print(f"First stream URL: {first_stream_url}")  # Выводим ссылку на стрим
+    
+    # Переходим по ссылке на первый стрим
+    driver.get(first_stream_url)
+    print("Clicked on the first stream.")
 except TimeoutException:
-    print("First video link not found.")
+    print("First video link not found or not clickable.")
     driver.quit()
     exit()
 
