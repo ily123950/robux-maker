@@ -44,8 +44,7 @@ except Exception as e:
     exit()
 
 # Перезагружаем сайт, чтобы cookies применились
-driver.get("https://www.youtube.com")
-time.sleep(5)
+
 
 # Проверка авторизации
 print("Checking login status...")
