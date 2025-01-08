@@ -4,6 +4,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
 
 # Настройка опций для работы в headless режиме
 chrome_options = Options()
@@ -55,9 +58,26 @@ time.sleep(3)  # Ждем загрузки результатов
 
 # Переходим на первый стрим
 print("Selecting the first live stream...")
-first_stream = driver.find_element(By.XPATH, '//*[@id="video-title"]')
-first_stream.click()
-print("Clicked on the first live stream.")
+try:
+    first_stream = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, '//*[@id="video-title"]'))
+    )
+    first_stream.click()
+    print("Clicked on the video title.")
+except ElementNotInteractableException:
+    print("Couldn't click the title, trying to click the preview image.")
+    
+    # Если не получилось кликнуть на название, пробуем кликнуть на превьюшку
+    try:
+        preview_image = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="thumbnail"]'))
+        )
+        preview_image.click()
+        print("Clicked on the video preview image.")
+    except Exception as e:
+        print(f"Error when trying to click the preview image: {e}")
+
+# Ожидаем загрузки видео
 time.sleep(5)  # Ждем, пока откроется видео
 
 # Открываем чат, если он скрыт
@@ -67,8 +87,8 @@ try:
     chat_button.click()
     print("Chat opened.")
     time.sleep(2)  # Ждем, пока чат откроется
-except Exception as e:
-    print(f"Error opening chat: {e}")
+except NoSuchElementException:
+    print("Chat button not found or already opened.")
 
 # Пишем сообщение в чат каждые 3 секунды в течение 5 минут
 end_time = time.time() + 300  # 5 минут
@@ -76,7 +96,9 @@ print("Sending messages to chat every 3 seconds for 5 minutes.")
 while time.time() < end_time:
     try:
         print("Finding chat input...")
-        chat_input = driver.find_element(By.XPATH, '//*[@id="input"]')
+        chat_input = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="input"]'))
+        )
         chat_input.send_keys("gamernoobikyt")  # Ваше сообщение
         chat_input.send_keys(Keys.RETURN)
         print("Message sent: gamernoobikyt")
