@@ -6,20 +6,16 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
 
 # Настройки для headless режима
 chrome_options = Options()
-chrome_options.add_argument("--headless")
+chrome_options.add_argument("--headless")  # Без графического интерфейса
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
 # Настройка WebDriver
-try:
-    driver = webdriver.Chrome(options=chrome_options)
-except WebDriverException as e:
-    print(f"Error initializing WebDriver: {e}")
-    exit()
+driver = webdriver.Chrome(options=chrome_options)
 
 # Загружаем сайт YouTube
 driver.get("https://www.youtube.com")
@@ -32,14 +28,15 @@ try:
         cookie_data = json.load(file)
         cookies = cookie_data["cookies"]
         for cookie in cookies:
-            driver.add_cookie({
+            cookie_dict = {
                 "name": cookie["name"],
                 "value": cookie["value"],
                 "domain": cookie["domain"],
                 "path": cookie.get("path", "/"),
                 "secure": cookie.get("secure", False),
                 "httpOnly": cookie.get("httpOnly", False),
-            })
+            }
+            driver.add_cookie(cookie_dict)
     print("Cookies loaded successfully.")
 except Exception as e:
     print(f"Error loading cookies: {e}")
@@ -56,44 +53,43 @@ try:
     avatar = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
     )
-    if avatar.is_displayed():
+    if avatar:
         print("Logged into the account successfully.")
     else:
-        print("Avatar not visible, login might have failed.")
-except TimeoutException as e:
-    print(f"Login check failed. Please ensure your cookies are valid. Error: {str(e)}")
+        print("Not logged in. Please check your cookies.")
+        driver.quit()
+        exit()
+except TimeoutException:
+    print("Login check failed. Please ensure your cookies are valid.")
     driver.quit()
     exit()
 
 # Поиск и выбор стрима
 print("Searching for 'Pls donate roblox live'...")
-try:
-    search_box = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.NAME, "search_query"))
-    )
-    search_box.send_keys("Pls donate roblox live")
-    search_box.submit()  # Нажимаем Enter
-    print("Search submitted.")
-    time.sleep(5)
+search_box = driver.find_element(By.NAME, "search_query")
+search_box.send_keys("Pls donate roblox live")
+search_box.send_keys(Keys.RETURN)
+time.sleep(5)
 
-    print("Waiting for search results...")
+# Ожидание загрузки результатов поиска
+print("Waiting for search results...")
+try:
     first_stream = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="video-title"]'))
     )
     first_stream_title = first_stream.get_attribute("title")
     first_stream_url = first_stream.get_attribute("href")
 
-    if first_stream_url:
-        print(f"First stream title: {first_stream_title}")
-        print(f"First stream URL: {first_stream_url}")
-        driver.get(first_stream_url)  # Переходим на страницу стрима
-        time.sleep(5)
-    else:
-        print("Stream URL not found.")
-        driver.quit()
-        exit()
-except TimeoutException as e:
-    print(f"First stream not found or not clickable. Error: {str(e)}")
+    print(f"First stream title: {first_stream_title}")
+    print(f"First stream URL: {first_stream_url}")
+
+    # Закрытие текущей вкладки и открытие новой
+    driver.close()
+    driver.switch_to.new_window('tab')
+    driver.get(first_stream_url)
+    time.sleep(5)
+except TimeoutException:
+    print("First stream not found or not clickable.")
     driver.quit()
     exit()
 
@@ -103,13 +99,16 @@ try:
     comment_box = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
     )
+    # Скроллим к элементу
     driver.execute_script("arguments[0].scrollIntoView(true);", comment_box)
-    time.sleep(1)
+    time.sleep(1)  # Небольшая задержка после скролла
 
+    # Проверяем, доступен ли элемент для взаимодействия
     if comment_box.is_displayed() and comment_box.is_enabled():
-        comment_box.click()
-        comment_box.send_keys("gamernoobikyt")
-        comment_box.send_keys(Keys.RETURN)
+        # Пишем сообщение в чат
+        comment_box.click()  # Кликаем на поле для активации
+        comment_box.send_keys("gamernoobikyt")  # Ваше сообщение
+        comment_box.send_keys(Keys.RETURN)  # Отправляем сообщение
         print("Message sent: gamernoobikyt")
     else:
         print("Comment box is not interactable.")
