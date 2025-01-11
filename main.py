@@ -10,6 +10,7 @@ from selenium.common.exceptions import TimeoutException
 
 # Настройки для headless режима
 chrome_options = Options()
+chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
@@ -46,21 +47,17 @@ except Exception as e:
 driver.get("https://www.youtube.com")
 time.sleep(5)
 
-# Делаем скриншот страницы
-screenshot_path = "screenshot_after_login.png"
-driver.save_screenshot(screenshot_path)
-print(f"Screenshot saved at {screenshot_path}. Please check if the account is logged in.")
-
 # Проверка авторизации
 print("Checking login status...")
 try:
-    # Проверяем наличие кнопки "Моя библиотека", которая доступна только для авторизованных пользователей
-    library_button = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, '//a[@title="Library"]'))
+    # Проверяем наличие аватара пользователя
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
     )
     print("Logged into the account successfully.")
-except TimeoutException:
-    print("Login check failed. Please ensure your cookies are valid.")
+except TimeoutException as e:
+    error_message = f"Login check failed. Please ensure your cookies are valid. Error: {str(e)}"
+    print(error_message)
     driver.quit()
     exit()
 
@@ -88,8 +85,8 @@ try:
     driver.switch_to.new_window('tab')
     driver.get(first_stream_url)
     time.sleep(5)
-except TimeoutException:
-    print("First stream not found or not clickable.")
+except TimeoutException as e:
+    print(f"First stream not found or not clickable. Error: {str(e)}")
     driver.quit()
     exit()
 
@@ -99,16 +96,13 @@ try:
     comment_box = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
     )
-    # Скроллим к элементу
     driver.execute_script("arguments[0].scrollIntoView(true);", comment_box)
-    time.sleep(1)  # Небольшая задержка после скролла
+    time.sleep(1)
 
-    # Проверяем, доступен ли элемент для взаимодействия
     if comment_box.is_displayed() and comment_box.is_enabled():
-        # Пишем сообщение в чат
-        comment_box.click()  # Кликаем на поле для активации
-        comment_box.send_keys("gamernoobikyt")  # Ваше сообщение
-        comment_box.send_keys(Keys.RETURN)  # Отправляем сообщение
+        comment_box.click()
+        comment_box.send_keys("gamernoobikyt")
+        comment_box.send_keys(Keys.RETURN)
         print("Message sent: gamernoobikyt")
     else:
         print("Comment box is not interactable.")
