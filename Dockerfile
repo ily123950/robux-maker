@@ -9,14 +9,17 @@ RUN apt-get update && apt-get install -y \
     libnspr4 libnss3 libgbm-dev libxss1 libappindicator3-1 \
     libxtst6 chromium chromium-driver
 
-# Устанавливаем selenium
-RUN pip install selenium
+# Устанавливаем selenium и flask
+RUN pip install selenium flask
 
 # Указываем рабочую директорию для копирования файлов проекта
 WORKDIR /usr/src/app
 
 # Копируем файлы проекта в контейнер
 COPY . .
+
+# Открываем порт, который будет слушать Flask сервер
+EXPOSE 10000
 
 # Указываем команду для запуска скрипта
 CMD ["python", "main.py"]
