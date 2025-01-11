@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from flask import Flask
 
 # Настройки для headless режима
 chrome_options = Options()
@@ -146,3 +147,18 @@ except Exception as e:
 # Завершаем работу
 print("Done.")
 driver.quit()
+
+# Запуск простого HTTP сервера для связи с портом
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return "Hello, World!"
+
+if __name__ == "__main__":
+    # Получаем порт из переменной окружения
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
