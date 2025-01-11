@@ -53,7 +53,6 @@ time.sleep(5)
 # Проверка авторизации
 print("Checking login status...")
 try:
-    # Ищем аватар пользователя
     avatar = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
     )
@@ -63,10 +62,6 @@ try:
         print("Avatar not visible, login might have failed.")
 except TimeoutException as e:
     print(f"Login check failed. Please ensure your cookies are valid. Error: {str(e)}")
-    driver.quit()
-    exit()
-except Exception as e:
-    print(f"Unexpected error during login check: {str(e)}")
     driver.quit()
     exit()
 
@@ -81,7 +76,6 @@ try:
     print("Search submitted.")
     time.sleep(5)
 
-    # Ожидание загрузки результатов поиска
     print("Waiting for search results...")
     first_stream = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="video-title"]'))
@@ -89,14 +83,15 @@ try:
     first_stream_title = first_stream.get_attribute("title")
     first_stream_url = first_stream.get_attribute("href")
 
-    print(f"First stream title: {first_stream_title}")
-    print(f"First stream URL: {first_stream_url}")
-
-    # Закрытие текущей вкладки и открытие новой
-    driver.close()
-    driver.switch_to.new_window('tab')
-    driver.get(first_stream_url)
-    time.sleep(5)
+    if first_stream_url:
+        print(f"First stream title: {first_stream_title}")
+        print(f"First stream URL: {first_stream_url}")
+        driver.get(first_stream_url)  # Переходим на страницу стрима
+        time.sleep(5)
+    else:
+        print("Stream URL not found.")
+        driver.quit()
+        exit()
 except TimeoutException as e:
     print(f"First stream not found or not clickable. Error: {str(e)}")
     driver.quit()
