@@ -1,12 +1,12 @@
 import json
 import time
+from random import sample
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from selenium.common.exceptions import TimeoutException
 
 # Настройки для headless режима
 chrome_options = Options()
@@ -65,61 +65,23 @@ try:
         driver.quit()
         exit()
 
-    # Поиск и выбор стрима
-    print("Searching for 'Pls donate roblox live'...")
-    search_box = driver.find_element(By.NAME, "search_query")
-    search_box.send_keys("Pls donate roblox live")
-    search_box.send_keys(Keys.RETURN)
-    time.sleep(5)
-
-    # Ожидание загрузки результатов поиска
-    print("Waiting for search results...")
+    # Получение названий видео с главной страницы
+    print("Fetching random video titles from the homepage...")
     try:
-        first_stream = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, '//*[@id="video-title"]'))
+        video_elements = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.XPATH, '//a[@id="video-title"]'))
         )
-        first_stream_title = first_stream.get_attribute("title")
-        first_stream_url = first_stream.get_attribute("href")
 
-        print(f"First stream title: {first_stream_title}")
-        
-        if first_stream_url:
-            print(f"First stream URL: {first_stream_url}")
-            # Закрытие текущей вкладки и открытие новой
-            driver.close()
-            driver.switch_to.new_window('tab')
-            driver.get(first_stream_url)
-            time.sleep(5)
+        # Выбираем 3 случайных видео
+        if len(video_elements) >= 3:
+            random_videos = sample(video_elements, 3)
+            for i, video in enumerate(random_videos, start=1):
+                print(f"Video {i}: {video.get_attribute('title')}")
         else:
-            print("Stream URL not found. Exiting.")
-            driver.quit()
-            exit()
+            print("Not enough videos found on the homepage.")
+
     except TimeoutException:
-        print("First stream not found or not clickable.")
-        driver.quit()
-        exit()
-
-    # Работа с комментариями
-    print("Waiting for comment box...")
-    try:
-        comment_box = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
-        )
-        # Скроллим к элементу
-        driver.execute_script("arguments[0].scrollIntoView(true);", comment_box)
-        time.sleep(1)  # Небольшая задержка после скролла
-
-        # Проверяем, доступен ли элемент для взаимодействия
-        if comment_box.is_displayed() and comment_box.is_enabled():
-            # Пишем сообщение в чат
-            comment_box.click()  # Кликаем на поле для активации
-            comment_box.send_keys("gamernoobikyt")  # Ваше сообщение
-            comment_box.send_keys(Keys.RETURN)  # Отправляем сообщение
-            print("Message sent: gamernoobikyt")
-        else:
-            print("Comment box is not interactable.")
-    except Exception as e:
-        print(f"Error interacting with the comment box: {e}")
+        print("No videos found on the homepage.")
 
 except Exception as e:
     print(f"An error occurred: {e}")
