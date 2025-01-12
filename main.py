@@ -100,8 +100,10 @@ except TimeoutException:
     exit()
 
 # Переход по сохраненной ссылке на стрим
-print(f"Going to stream: {saved_video_url}")
-driver.get(saved_video_url)
+print(f"Closing current tab and going to stream: {saved_video_url}")
+driver.close()  # Закрываем текущую вкладку
+driver = webdriver.Chrome(options=chrome_options)  # Открываем новую вкладку
+driver.get(saved_video_url)  # Переходим на сохранённую ссылку
 time.sleep(5)
 
 # Проверка авторизации после перехода на стрим
@@ -149,8 +151,6 @@ print("Done.")
 driver.quit()
 
 # Запуск простого HTTP сервера для связи с портом
-from flask import Flask
-
 app = Flask(__name__)
 
 @app.route('/')
