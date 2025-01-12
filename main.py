@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from selenium.common.exceptions import TimeoutException
 from flask import Flask
 
 # Настройки для headless режима
@@ -100,21 +100,20 @@ except TimeoutException:
     exit()
 
 # Переход по сохраненной ссылке на стрим
-print(f"Closing current tab and going to stream: {saved_video_url}")
-driver.close()  # Закрываем текущую вкладку
-driver = webdriver.Chrome(options=chrome_options)  # Открываем новую вкладку
-driver.get(saved_video_url)  # Переходим на сохранённую ссылку
+print(f"Going to stream: {saved_video_url}")
+driver.get("about:blank")  # Закрываем текущую вкладку
+time.sleep(1)
+driver.get(saved_video_url)  # Переходим на стрим
 time.sleep(5)
 
-# Загрузка cookies после перехода на стрим
-print("Loading cookies again for the stream...")
+# Загружаем куки и перезагружаем страницу стрима
+print("Reloading cookies and refreshing stream page...")
 load_cookies(driver, "cookies.json")
-print("Reloading the stream page...")
-driver.get(saved_video_url)  # Перезагружаем страницу стрима
+driver.get(saved_video_url)
 time.sleep(5)
 
-# Проверка авторизации после загрузки cookies
-print("Checking login status after reloading the stream page...")
+# Проверка авторизации после загрузки куков
+print("Checking login status after navigating to stream...")
 try:
     avatar = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
@@ -122,7 +121,7 @@ try:
     if avatar:
         print("Logged into the account successfully.")
     else:
-        print("Not logged in after reloading. Please check your cookies.")
+        print("Not logged in. Please check your cookies.")
         driver.quit()
         exit()
 except TimeoutException:
@@ -133,9 +132,18 @@ except TimeoutException:
 # Работа с комментариями
 print("Waiting for comment box...")
 try:
+    # Переключаемся на iframe чата
+    chat_frame = WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.XPATH, '//*[@id="chatframe"]'))
+    )
+    driver.switch_to.frame(chat_frame)  # Переключаемся на iframe
+    print("Switched to chat iframe.")
+
+    # Ожидаем появления поля ввода
     comment_box = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
     )
+    
     # Скроллим к элементу
     driver.execute_script("arguments[0].scrollIntoView(true);", comment_box)
     time.sleep(1)  # Небольшая задержка после скролла
@@ -151,6 +159,9 @@ try:
         print("Comment box is not interactable.")
 except Exception as e:
     print(f"Error interacting with the comment box: {e}")
+finally:
+    # Возвращаемся на основной контекст (главную страницу)
+    driver.switch_to.default_content()
 
 # Завершаем работу
 print("Done.")
@@ -164,7 +175,6 @@ def hello():
     return "Hello, World!"
 
 if __name__ == "__main__":
-    # Получаем порт из переменной окружения
     import os
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
