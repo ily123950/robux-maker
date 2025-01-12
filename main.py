@@ -106,8 +106,15 @@ driver = webdriver.Chrome(options=chrome_options)  # Открываем нову
 driver.get(saved_video_url)  # Переходим на сохранённую ссылку
 time.sleep(5)
 
-# Проверка авторизации после перехода на стрим
-print("Checking login status after navigating to stream...")
+# Загрузка cookies после перехода на стрим
+print("Loading cookies again for the stream...")
+load_cookies(driver, "cookies.json")
+print("Reloading the stream page...")
+driver.get(saved_video_url)  # Перезагружаем страницу стрима
+time.sleep(5)
+
+# Проверка авторизации после загрузки cookies
+print("Checking login status after reloading the stream page...")
 try:
     avatar = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
@@ -115,10 +122,9 @@ try:
     if avatar:
         print("Logged into the account successfully.")
     else:
-        print("Not logged in. Re-loading cookies and refreshing.")
-        load_cookies(driver, "cookies.json")
-        driver.get(saved_video_url)
-        time.sleep(5)
+        print("Not logged in after reloading. Please check your cookies.")
+        driver.quit()
+        exit()
 except TimeoutException:
     print("Login check failed. Please ensure your cookies are valid.")
     driver.quit()
