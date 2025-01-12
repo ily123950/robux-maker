@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
 from flask import Flask
 
 # Настройки для headless режима
@@ -101,18 +101,18 @@ except TimeoutException:
 
 # Переход по сохраненной ссылке на стрим
 print(f"Going to stream: {saved_video_url}")
-driver.get("about:blank")  # Закрываем текущую вкладку
-time.sleep(1)
-driver.get(saved_video_url)  # Переходим на стрим
+driver.close()  # Закрываем текущую вкладку
+driver = webdriver.Chrome(options=chrome_options)  # Открываем новый браузер
+driver.get(saved_video_url)
 time.sleep(5)
 
-# Загружаем куки и перезагружаем страницу стрима
-print("Reloading cookies and refreshing stream page...")
+# Загрузка cookies и перезагрузка страницы
+print("Loading cookies and refreshing stream page...")
 load_cookies(driver, "cookies.json")
 driver.get(saved_video_url)
 time.sleep(5)
 
-# Проверка авторизации после загрузки куков
+# Проверка авторизации после загрузки стрима
 print("Checking login status after navigating to stream...")
 try:
     avatar = WebDriverWait(driver, 10).until(
@@ -139,24 +139,33 @@ try:
     driver.switch_to.frame(chat_frame)  # Переключаемся на iframe
     print("Switched to chat iframe.")
 
-    # Ожидаем появления поля ввода
-    comment_box = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
-    )
-    
-    # Скроллим к элементу
-    driver.execute_script("arguments[0].scrollIntoView(true);", comment_box)
-    time.sleep(1)  # Небольшая задержка после скролла
+    # Проверяем наличие поля ввода комментариев
+    comment_box_exists = len(driver.find_elements(By.XPATH, '//*[@id="input"]')) > 0
 
-    # Проверяем, доступен ли элемент для взаимодействия
-    if comment_box.is_displayed() and comment_box.is_enabled():
-        # Пишем сообщение в чат
-        comment_box.click()  # Кликаем на поле для активации
-        comment_box.send_keys("gamernoobikyt")  # Ваше сообщение
-        comment_box.send_keys(Keys.RETURN)  # Отправляем сообщение
-        print("Message sent: gamernoobikyt")
+    if comment_box_exists:
+        print("Comment box exists in the iframe.")
+
+        # Ожидаем появления поля ввода
+        comment_box = WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
+        )
+
+        # Скроллим к элементу
+        driver.execute_script("arguments[0].scrollIntoView(true);", comment_box)
+        time.sleep(1)  # Небольшая задержка после скролла
+
+        # Проверяем, доступен ли элемент для взаимодействия
+        if comment_box.is_displayed() and comment_box.is_enabled():
+            # Пишем сообщение в чат
+            comment_box.click()  # Кликаем на поле для активации
+            comment_box.send_keys("gamernoobikyt")  # Ваше сообщение
+            comment_box.send_keys(Keys.RETURN)  # Отправляем сообщение
+            print("Message sent: gamernoobikyt")
+        else:
+            print("Comment box is not interactable.")
     else:
-        print("Comment box is not interactable.")
+        print("Comment box does not exist in the iframe.")
+
 except Exception as e:
     print(f"Error interacting with the comment box: {e}")
 finally:
@@ -175,6 +184,7 @@ def hello():
     return "Hello, World!"
 
 if __name__ == "__main__":
+    # Получаем порт из переменной окружения
     import os
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
