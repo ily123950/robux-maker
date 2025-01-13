@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from selenium.common.exceptions import TimeoutException, ElementNotInteractableException, NoSuchElementException
 from flask import Flask
 
 # Настройки для headless режима
@@ -48,6 +48,14 @@ except TimeoutException:
     print("First stream not found or not clickable.")
     driver.quit()
     exit()
+
+# Проверяем корректность URL
+if not isinstance(saved_video_url, str) or not saved_video_url.startswith("http"):
+    print(f"Invalid URL: {saved_video_url}")
+    driver.quit()
+    exit()
+
+print(f"Saved video URL: {saved_video_url}")
 
 # Возвращаемся на главную страницу YouTube
 print("Returning to YouTube homepage...")
@@ -107,34 +115,33 @@ driver.get(saved_video_url)
 time.sleep(5)
 
 # Загрузка cookies и перезагрузка страницы
-print("Loading cookies and refreshing stream page...")
+print("Reloading cookies after navigating to the stream...")
 load_cookies(driver, "cookies.json")
-driver.get(saved_video_url)
+driver.refresh()
 time.sleep(5)
 
-# Проверка авторизации после загрузки стрима
+# Проверка авторизации после перехода на стрим
 print("Checking login status after navigating to stream...")
 try:
     avatar = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
     )
     if avatar:
-        print("Avatar found. Clicking to check logout button.")
-        avatar.click()  # Нажимаем на иконку профиля
-        time.sleep(2)  # Небольшая задержка для появления меню
+        print("Logged into the account successfully.")
+        avatar.click()
+        time.sleep(2)
 
-        # Проверяем наличие кнопки "Выйти" (на русском или английском)
-        logout_button = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, '//yt-formatted-string[text()="Выйти" or text()="Sign out"]'))
-        )
-        if logout_button:
-            print("Logout button found. User is fully logged in.")
-        else:
-            print("Logout button not found. User might not be fully logged in.")
+        # Проверяем наличие кнопки выхода
+        try:
+            logout_button = driver.find_element(By.XPATH, '//yt-formatted-string[text()="Sign out" or text()="Выйти"]')
+            print("Logout button found. Account is confirmed as logged in.")
+        except NoSuchElementException:
+            print("Logout button not found. Please verify account status.")
     else:
-        print("Avatar not found. User might not be logged in.")
-        driver.quit()
-        exit()
+        print("Not logged in. Re-loading cookies and refreshing.")
+        load_cookies(driver, "cookies.json")
+        driver.refresh()
+        time.sleep(5)
 except TimeoutException:
     print("Login check failed. Please ensure your cookies are valid.")
     driver.quit()
