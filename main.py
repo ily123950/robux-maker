@@ -15,17 +15,37 @@ chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
-# Функция для загрузки cookies
-def load_cookies(driver, cookies_file):
-    """Загрузка cookies в браузер."""
+# Функция для преобразования формата cookies
+def transform_cookies(cookies_file):
+    """Преобразование cookies из расширенного формата в формат Selenium."""
     try:
         with open(cookies_file, "r") as file:
-            cookie_data = json.load(file)["cookies"]
-            for cookie in cookie_data:
-                driver.add_cookie(cookie)
-        print("Cookies loaded successfully.")
+            data = json.load(file)
+            transformed_cookies = [
+                {
+                    "name": cookie["name"],
+                    "value": cookie["value"],
+                    "domain": cookie["domain"],
+                    "path": cookie.get("path", "/"),
+                    "secure": cookie.get("secure", False),
+                    "httpOnly": cookie.get("httpOnly", False),
+                }
+                for cookie in data.get("cookies", [])
+            ]
+            return transformed_cookies
     except Exception as e:
-        print(f"Error loading cookies: {e}")
+        print(f"Error transforming cookies: {e}")
+        return []
+
+# Функция для загрузки cookies в WebDriver
+def load_cookies(driver, cookies_file):
+    """Загрузка cookies в браузер."""
+    cookies = transform_cookies(cookies_file)
+    for cookie in cookies:
+        try:
+            driver.add_cookie(cookie)
+        except Exception as e:
+            print(f"Error adding cookie: {e}")
 
 # Функция для проверки авторизации
 def check_login(driver):
