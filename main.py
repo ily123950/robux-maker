@@ -119,58 +119,26 @@ try:
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
     )
     if avatar:
-        print("Logged into the account successfully.")
+        print("Avatar found. Clicking to check logout button.")
+        avatar.click()  # Нажимаем на иконку профиля
+        time.sleep(2)  # Небольшая задержка для появления меню
+
+        # Проверяем наличие кнопки "Выйти" (на русском или английском)
+        logout_button = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, '//yt-formatted-string[text()="Выйти" or text()="Sign out"]'))
+        )
+        if logout_button:
+            print("Logout button found. User is fully logged in.")
+        else:
+            print("Logout button not found. User might not be fully logged in.")
     else:
-        print("Not logged in. Please check your cookies.")
+        print("Avatar not found. User might not be logged in.")
         driver.quit()
         exit()
 except TimeoutException:
     print("Login check failed. Please ensure your cookies are valid.")
     driver.quit()
     exit()
-
-# Работа с комментариями
-print("Waiting for comment box...")
-try:
-    # Переключаемся на iframe чата
-    chat_frame = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.XPATH, '//*[@id="chatframe"]'))
-    )
-    driver.switch_to.frame(chat_frame)  # Переключаемся на iframe
-    print("Switched to chat iframe.")
-
-    # Проверяем наличие поля ввода комментариев
-    comment_box_exists = len(driver.find_elements(By.XPATH, '//*[@id="input"]')) > 0
-
-    if comment_box_exists:
-        print("Comment box exists in the iframe.")
-
-        # Ожидаем появления поля ввода
-        comment_box = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
-        )
-
-        # Скроллим к элементу
-        driver.execute_script("arguments[0].scrollIntoView(true);", comment_box)
-        time.sleep(1)  # Небольшая задержка после скролла
-
-        # Проверяем, доступен ли элемент для взаимодействия
-        if comment_box.is_displayed() and comment_box.is_enabled():
-            # Пишем сообщение в чат
-            comment_box.click()  # Кликаем на поле для активации
-            comment_box.send_keys("gamernoobikyt")  # Ваше сообщение
-            comment_box.send_keys(Keys.RETURN)  # Отправляем сообщение
-            print("Message sent: gamernoobikyt")
-        else:
-            print("Comment box is not interactable.")
-    else:
-        print("Comment box does not exist in the iframe.")
-
-except Exception as e:
-    print(f"Error interacting with the comment box: {e}")
-finally:
-    # Возвращаемся на основной контекст (главную страницу)
-    driver.switch_to.default_content()
 
 # Завершаем работу
 print("Done.")
