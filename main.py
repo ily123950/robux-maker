@@ -10,7 +10,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 # Настройки для headless режима
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # Без графического интерфейса
+# chrome_options.add_argument("--headless")  # Без графического интерфейса
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
