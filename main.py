@@ -18,6 +18,9 @@ chrome_options.add_argument("--disable-dev-shm-usage")
 user_data_dir = tempfile.mkdtemp()  # Создаем временную директорию
 chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
 
+# Указываем уникальный порт для удалённой отладки
+chrome_options.add_argument("--remote-debugging-port=9222")
+
 # Настройка WebDriver
 driver = webdriver.Chrome(options=chrome_options)
 
