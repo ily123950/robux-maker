@@ -1,5 +1,6 @@
 import json
 import time
+import tempfile
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -8,11 +9,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-# Настройки для headless режима
+# Настройки для браузера
 chrome_options = Options()
-# chrome_options.add_argument("--headless")  # Без графического интерфейса
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
+
+# Указываем уникальную директорию для пользовательских данных
+user_data_dir = tempfile.mkdtemp()  # Создаем временную директорию
+chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
 
 # Настройка WebDriver
 driver = webdriver.Chrome(options=chrome_options)
@@ -74,14 +78,16 @@ except TimeoutException:
 # Переход к чату и отправка сообщения
 print("Switching to chat iframe...")
 try:
-    chat_iframe = WebDriverWait(driver, 10).until(
+    # Ожидание загрузки iframe с чатом
+    chat_iframe = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//iframe[@id="chatframe"]'))
     )
     driver.switch_to.frame(chat_iframe)
 
     print("Waiting for chat input box...")
-    comment_box = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, '//*[@id="input"]'))
+    # Ожидание загрузки поля ввода сообщения
+    comment_box = WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.XPATH, '//div[@id="input"]'))
     )
 
     if comment_box.is_displayed() and comment_box.is_enabled():
