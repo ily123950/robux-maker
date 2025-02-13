@@ -1,7 +1,8 @@
 import json
 import time
-import tempfile
+import logging
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
@@ -9,26 +10,28 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-# Настройки для браузера
+# Настраиваем логи
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+# Настройки Chrome
 chrome_options = Options()
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--headless=new")  # Запуск в headless-режиме
+chrome_options.add_argument("--enable-logging")  # Включаем логи
+chrome_options.add_argument("--v=1")  # Уровень логирования
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--window-size=1920,1080")
 
-# Указываем уникальную директорию для пользовательских данных
-user_data_dir = tempfile.mkdtemp()  # Создаем временную директорию
-chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
-
-# Указываем уникальный порт для удалённой отладки
-chrome_options.add_argument("--remote-debugging-port=9222")
-
-# Настройка WebDriver
-driver = webdriver.Chrome(options=chrome_options)
+# Подключаем ChromeDriver с сервисом логирования
+service = Service("/usr/bin/chromedriver")  # Укажи правильный путь, если нужно
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # Ссылка на стрим
 stream_url = "https://www.youtube.com/live/Y3fdeGo0VHA"
 
 # Переход на стрим
-print(f"Navigating to stream: {stream_url}")
+logging.info(f"Переход по ссылке: {stream_url}")
 driver.get(stream_url)
 time.sleep(5)
 
@@ -39,73 +42,61 @@ def load_cookies(driver, cookies_file):
         with open(cookies_file, "r") as file:
             cookie_data = json.load(file)["cookies"]
             for cookie in cookie_data:
-                cookie_dict = {
-                    "name": cookie["name"],
-                    "value": cookie["value"],
-                    "domain": cookie["domain"],
-                    "path": cookie.get("path", "/"),
-                    "secure": cookie.get("secure", False),
-                    "httpOnly": cookie.get("httpOnly", False),
-                }
-                driver.add_cookie(cookie_dict)
-        print("Cookies loaded successfully.")
+                driver.add_cookie(cookie)
+        logging.info("Cookies загружены успешно.")
     except Exception as e:
-        print(f"Error loading cookies: {e}")
+        logging.error(f"Ошибка загрузки cookies: {e}")
 
 # Загрузка cookies
-print("Loading cookies...")
+logging.info("Загрузка cookies...")
 load_cookies(driver, "cookies.json")
 
 # Перезагрузка страницы
-print("Refreshing page to apply cookies...")
+logging.info("Обновление страницы для применения cookies...")
 driver.refresh()
 time.sleep(5)
 
 # Проверка авторизации
-print("Checking login status...")
+logging.info("Проверка авторизации...")
 try:
     avatar = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
     )
-    if avatar:
-        print("Logged into the account successfully.")
-    else:
-        print("Not logged in. Please check your cookies.")
-        driver.quit()
-        exit()
+    logging.info("Авторизация успешна.")
 except TimeoutException:
-    print("Login check failed. Please ensure your cookies are valid.")
+    logging.error("Ошибка авторизации. Проверь cookies.")
     driver.quit()
     exit()
 
 # Переход к чату и отправка сообщения
-print("Switching to chat iframe...")
+logging.info("Попытка переключиться на чат...")
 try:
-    # Ожидание загрузки iframe с чатом
     chat_iframe = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//iframe[@id="chatframe"]'))
     )
     driver.switch_to.frame(chat_iframe)
 
-    print("Waiting for chat input box...")
-    # Ожидание загрузки поля ввода сообщения
+    logging.info("Поиск поля ввода сообщения в чате...")
     comment_box = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//div[@id="input"]'))
     )
 
     if comment_box.is_displayed() and comment_box.is_enabled():
-        print("Comment box found. Sending message...")
+        logging.info("Поле ввода найдено, отправка сообщения...")
         comment_box.click()
         comment_box.send_keys("test")
         comment_box.send_keys(Keys.RETURN)
-        print("Message sent: test")
+        logging.info("Сообщение отправлено: test")
     else:
-        print("Comment box is not interactable.")
-except TimeoutException:
-    print("Chat iframe or input box not found.")
-except NoSuchElementException:
-    print("Element not found in chat iframe.")
+        logging.warning("Поле ввода чата неактивно.")
+except (TimeoutException, NoSuchElementException) as e:
+    logging.error(f"Ошибка работы с чатом: {e}")
+
+# Сохранение скриншота (если надо)
+screenshot_path = "screenshot.png"
+driver.save_screenshot(screenshot_path)
+logging.info(f"Скриншот сохранён: {screenshot_path}")
 
 # Завершаем работу
-print("Test completed.")
+logging.info("Тест завершён.")
 driver.quit()
