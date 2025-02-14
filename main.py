@@ -2,7 +2,6 @@ import json
 import time
 import logging
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
@@ -10,48 +9,74 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-# Настраиваем логи
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# Настройка логов
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
-# Настройки Chrome
+# Настройки Chrome (headless-режим)
 chrome_options = Options()
+chrome_options.add_argument("--headless=new")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--headless=new")  # Запуск в headless-режиме
-chrome_options.add_argument("--enable-logging")  # Включаем логи
-chrome_options.add_argument("--v=1")  # Уровень логирования
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--window-size=1920,1080")
+chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+chrome_options.add_argument("--window-size=1920x1080")
 
-# Подключаем ChromeDriver с сервисом логирования
-service = Service("/usr/bin/chromedriver")  # Укажи правильный путь, если нужно
-driver = webdriver.Chrome(service=service, options=chrome_options)
+# User-Agent Android 14 (Chrome 133, Xiaomi 22021211RG)
+chrome_options.add_argument(
+    "user-agent=Mozilla/5.0 (Linux; Android 14; 22021211RG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36"
+)
 
-# Ссылка на стрим
+# Запуск WebDriver
+logging.info("Запуск WebDriver...")
+driver = webdriver.Chrome(options=chrome_options)
+
+# Функция загрузки cookies
+def load_cookies(driver, cookies_file):
+    """Загрузка cookies с проверкой формата"""
+    try:
+        with open(cookies_file, "r") as file:
+            data = json.load(file)
+
+            if "cookies" not in data:
+                raise ValueError("Неверный формат cookies.json! Должен быть объект с ключом 'cookies'.")
+
+            for cookie in data["cookies"]:
+                if not all(k in cookie for k in ["name", "value", "domain"]):
+                    logging.error(f"Пропущены ключевые данные в cookie: {cookie}")
+                    continue  # Пропускаем невалидные куки
+
+                driver.add_cookie({
+                    "name": cookie["name"],
+                    "value": cookie["value"],
+                    "domain": cookie["domain"],
+                    "path": cookie.get("path", "/"),
+                    "secure": cookie.get("secure", False),
+                    "httpOnly": cookie.get("httpOnly", False),
+                })
+
+            logging.info("Cookies загружены успешно.")
+    except FileNotFoundError:
+        logging.error("Файл cookies.json не найден!")
+    except json.JSONDecodeError:
+        logging.error("Ошибка парсинга cookies.json! Проверь формат.")
+    except Exception as e:
+        logging.error(f"Ошибка загрузки cookies: {e}")
+
+# URL стрима
 stream_url = "https://www.youtube.com/live/Y3fdeGo0VHA"
 
-# Переход на стрим
+# Открытие стрима
 logging.info(f"Переход по ссылке: {stream_url}")
 driver.get(stream_url)
 time.sleep(5)
-
-# Функция для загрузки cookies
-def load_cookies(driver, cookies_file):
-    """Загрузка cookies в браузер."""
-    try:
-        with open(cookies_file, "r") as file:
-            cookie_data = json.load(file)["cookies"]
-            for cookie in cookie_data:
-                driver.add_cookie(cookie)
-        logging.info("Cookies загружены успешно.")
-    except Exception as e:
-        logging.error(f"Ошибка загрузки cookies: {e}")
 
 # Загрузка cookies
 logging.info("Загрузка cookies...")
 load_cookies(driver, "cookies.json")
 
-# Перезагрузка страницы
+# Перезагрузка страницы для применения cookies
 logging.info("Обновление страницы для применения cookies...")
 driver.refresh()
 time.sleep(5)
@@ -62,41 +87,38 @@ try:
     avatar = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
     )
-    logging.info("Авторизация успешна.")
+    logging.info("Авторизация успешна!")
 except TimeoutException:
     logging.error("Ошибка авторизации. Проверь cookies.")
     driver.quit()
     exit()
 
-# Переход к чату и отправка сообщения
-logging.info("Попытка переключиться на чат...")
+# Переход в чат и отправка сообщения
+logging.info("Поиск iframe чата...")
 try:
     chat_iframe = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//iframe[@id="chatframe"]'))
     )
     driver.switch_to.frame(chat_iframe)
 
-    logging.info("Поиск поля ввода сообщения в чате...")
+    logging.info("Поиск поля ввода чата...")
     comment_box = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//div[@id="input"]'))
     )
 
     if comment_box.is_displayed() and comment_box.is_enabled():
-        logging.info("Поле ввода найдено, отправка сообщения...")
+        logging.info("Поле чата найдено. Отправка сообщения...")
         comment_box.click()
         comment_box.send_keys("test")
         comment_box.send_keys(Keys.RETURN)
-        logging.info("Сообщение отправлено: test")
+        logging.info("Сообщение отправлено!")
     else:
-        logging.warning("Поле ввода чата неактивно.")
-except (TimeoutException, NoSuchElementException) as e:
-    logging.error(f"Ошибка работы с чатом: {e}")
+        logging.error("Поле чата неактивно!")
+except TimeoutException:
+    logging.error("Не найден iframe чата или поле ввода!")
+except NoSuchElementException:
+    logging.error("Элемент не найден в чате!")
 
-# Сохранение скриншота (если надо)
-screenshot_path = "screenshot.png"
-driver.save_screenshot(screenshot_path)
-logging.info(f"Скриншот сохранён: {screenshot_path}")
-
-# Завершаем работу
+# Завершение работы
 logging.info("Тест завершён.")
 driver.quit()
