@@ -22,19 +22,15 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 chrome_options.add_argument("--window-size=1920x1080")
-
-# User-Agent Android 14 (Chrome 133, Xiaomi 22021211RG)
-chrome_options.add_argument(
-    "user-agent=Mozilla/5.0 (Linux; Android 14; 22021211RG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36"
-)
+chrome_options.add_argument("user-agent=Mozilla/5.0 (Linux; Android 14; 22021211RG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36")
 
 # Запуск WebDriver
 logging.info("Запуск WebDriver...")
 driver = webdriver.Chrome(options=chrome_options)
 
-# Функция загрузки cookies
+# Функция загрузки cookies через CDP
 def load_cookies(driver, cookies_file):
-    """Загрузка cookies с исправлением домена"""
+    """Загрузка cookies с фильтрацией защищенных и httpOnly cookies"""
     try:
         with open(cookies_file, "r") as file:
             data = json.load(file)
@@ -42,19 +38,22 @@ def load_cookies(driver, cookies_file):
             if "cookies" not in data:
                 raise ValueError("Неверный формат cookies.json! Должен быть объект с ключом 'cookies'.")
 
-            for cookie in data["cookies"]:
-                if not all(k in cookie for k in ["name", "value"]):
-                    logging.error(f"Пропущены ключевые данные в cookie: {cookie}")
-                    continue
+            # Подключение к CDP (Chrome DevTools Protocol)
+            driver.execute_cdp_cmd("Network.enable", {})
 
-                # Принудительно устанавливаем правильный домен
-                cookie["domain"] = ".youtube.com"
+            for cookie in data["cookies"]:
+                if any(s in cookie["name"] for s in ["__Secure-", "SID", "SAPISID", "APISID"]):
+                    logging.warning(f"Пропуск защищенного cookie: {cookie['name']}")
+                    continue  # Пропускаем защищенные cookies
+
+                cookie["domain"] = ".youtube.com"  # Принудительно устанавливаем правильный домен
 
                 try:
-                    driver.add_cookie(cookie)
+                    driver.execute_cdp_cmd("Network.setCookie", cookie)
                 except Exception as e:
                     logging.error(f"Ошибка добавления cookie {cookie['name']}: {e}")
 
+            driver.execute_cdp_cmd("Network.disable", {})
             logging.info("Cookies загружены успешно.")
     except FileNotFoundError:
         logging.error("Файл cookies.json не найден!")
@@ -68,7 +67,7 @@ logging.info("Открытие YouTube...")
 driver.get("https://www.youtube.com")
 time.sleep(3)
 
-# Загрузка cookies
+# Загрузка cookies через CDP
 logging.info("Загрузка cookies...")
 load_cookies(driver, "cookies.json")
 
