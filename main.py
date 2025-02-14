@@ -9,10 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 # Настройка логов
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 # Настройки Chrome
 chrome_options = Options()
@@ -29,96 +26,47 @@ chrome_options.add_argument(
 logging.info("Запуск WebDriver...")
 driver = webdriver.Chrome(options=chrome_options)
 
-# Функция проверки авторизации
-def is_logged_in(driver):
-    """Проверяет, авторизован ли пользователь (по наличию аватарки)."""
-    try:
-        WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
-        )
-        logging.info("Авторизация обнаружена!")
-        return True
-    except TimeoutException:
-        logging.warning("Авторизация не найдена!")
-        return False
-
 # Функция загрузки cookies
-def load_cookies(driver, cookies_file, domain):
-    """Загружает cookies для указанного домена"""
+def load_cookies(driver, cookies_file):
     try:
         with open(cookies_file, "r") as file:
-            data = json.load(file)
-
-            if "cookies" not in data:
-                raise ValueError("Неверный формат cookies.json!")
-
-            for cookie in data["cookies"]:
-                # Проверяем, что домен совпадает или является поддоменом
-                cookie_domain = cookie.get("domain", "")
-                if not cookie_domain.startswith("."):
-                    cookie_domain = "." + cookie_domain  # Делаем домен универсальным
-
-                if domain.endswith(cookie_domain) or cookie_domain.endswith(domain):
-                    driver.add_cookie({
-                        "name": cookie["name"],
-                        "value": cookie["value"],
-                        "domain": cookie_domain,
-                        "path": cookie.get("path", "/"),
-                        "secure": cookie.get("secure", False),
-                        "httpOnly": cookie.get("httpOnly", False),
-                    })
-
-            logging.info("Cookies загружены успешно.")
-    except FileNotFoundError:
-        logging.error("Файл cookies.json не найден!")
-    except json.JSONDecodeError:
-        logging.error("Ошибка парсинга cookies.json!")
+            for cookie in json.load(file).get("cookies", []):
+                cookie["domain"] = ".youtube.com"
+                driver.add_cookie(cookie)
+        logging.info("Cookies загружены.")
     except Exception as e:
         logging.error(f"Ошибка загрузки cookies: {e}")
 
-# 1. Открываем YouTube
-logging.info("Переход на YouTube...")
-driver.get("https://www.youtube.com/")
-time.sleep(5)
+# Функция проверки авторизации
+def is_logged_in(driver):
+    try:
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "avatar-btn")))
+        return True
+    except TimeoutException:
+        return False
 
-# 2. Проверяем авторизацию
-if not is_logged_in(driver):
-    logging.info("Загрузка cookies...")
-    load_cookies(driver, "cookies.json", ".youtube.com")
-
-    # Перезагружаем страницу
-    logging.info("Обновление страницы для применения cookies...")
-    driver.refresh()
-    time.sleep(5)
-
-# 3. Переходим на видео
+# Переход на видео
 video_url = "https://www.youtube.com/watch?v=nq1GqSVQzeU"
-logging.info(f"Переход на видео: {video_url}")
+logging.info(f"Открытие видео: {video_url}")
 driver.get(video_url)
 time.sleep(5)
 
-# 4. Проверяем авторизацию ещё раз
-if not is_logged_in(driver):
-    logging.info("Повторная загрузка cookies...")
-    load_cookies(driver, "cookies.json", ".youtube.com")
+# Загрузка cookies и перезагрузка страницы
+logging.info("Загрузка cookies...")
+load_cookies(driver, "cookies.json")
+driver.refresh()
+time.sleep(5)
 
-    # Перезагружаем страницу
-    logging.info("Обновление страницы для применения cookies...")
-    driver.refresh()
-    time.sleep(5)
-
-# 5. Ставим лайк
+# Проверка авторизации и попытка поставить лайк
 if is_logged_in(driver):
-    logging.info("Попытка поставить лайк...")
+    logging.info("Авторизован, ставим лайк...")
     try:
-        like_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, '//button[@id="like-button"]'))
-        )
-        like_button.click()
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "like-button"))).click()
         logging.info("Лайк поставлен!")
     except TimeoutException:
-        logging.error("Не удалось найти кнопку лайка!")
+        logging.error("Не удалось поставить лайк.")
+else:
+    logging.error("Авторизация не найдена.")
 
 # Завершение работы
-logging.info("Завершение работы...")
 driver.quit()
