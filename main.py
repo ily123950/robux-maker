@@ -1,15 +1,15 @@
 import json
 import time
+import random
 import logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-# Настройка логирования
+# Настройка логов
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
@@ -22,10 +22,8 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 chrome_options.add_argument("--window-size=1920x1080")
-
-# User-Agent Android 14 (Chrome 133, Xiaomi 22021211RG)
 chrome_options.add_argument(
-    "user-agent=Mozilla/5.0 (Linux; Android 14; 22021211RG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36"
+    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
 )
 
 # Запуск WebDriver
@@ -33,29 +31,24 @@ logging.info("Запуск WebDriver...")
 driver = webdriver.Chrome(options=chrome_options)
 
 # Функция загрузки cookies
-def load_cookies(driver, cookies_file):
-    """Загружает cookies с проверкой формата и фильтрацией защищённых"""
+def load_cookies(driver, cookies_file, domain):
+    """Загружает cookies для указанного домена"""
     try:
         with open(cookies_file, "r") as file:
             data = json.load(file)
 
             if "cookies" not in data:
-                raise ValueError("Неверный формат cookies.json! Должен быть объект с ключом 'cookies'.")
+                raise ValueError("Неверный формат cookies.json!")
 
             for cookie in data["cookies"]:
-                # Фильтрация защищённых cookie (например, __Secure, HttpOnly, SameSite)
-                if cookie["name"].startswith("__Secure") or "HttpOnly" in cookie:
-                    logging.warning(f"Пропуск защищённого cookie: {cookie['name']}")
+                if "domain" in cookie and domain not in cookie["domain"]:
+                    logging.warning(f"Пропуск cookie {cookie['name']} из-за несовпадения домена.")
                     continue
                 
-                if not all(k in cookie for k in ["name", "value", "domain"]):
-                    logging.error(f"Пропущены ключевые данные в cookie: {cookie}")
-                    continue  # Пропускаем невалидные куки
-
                 driver.add_cookie({
                     "name": cookie["name"],
                     "value": cookie["value"],
-                    "domain": cookie["domain"],
+                    "domain": domain,
                     "path": cookie.get("path", "/"),
                     "secure": cookie.get("secure", False),
                     "httpOnly": cookie.get("httpOnly", False),
@@ -65,31 +58,28 @@ def load_cookies(driver, cookies_file):
     except FileNotFoundError:
         logging.error("Файл cookies.json не найден!")
     except json.JSONDecodeError:
-        logging.error("Ошибка парсинга cookies.json! Проверь формат.")
+        logging.error("Ошибка парсинга cookies.json!")
     except Exception as e:
         logging.error(f"Ошибка загрузки cookies: {e}")
 
-# URL стрима
-stream_url = "https://www.youtube.com/live/Y3fdeGo0VHA"
-
-# Открытие стрима
-logging.info(f"Переход по ссылке: {stream_url}")
-driver.get(stream_url)
+# 1. Открываем YouTube
+logging.info("Переход на YouTube...")
+driver.get("https://www.youtube.com/")
 time.sleep(5)
 
-# Загрузка cookies
+# 2. Загружаем cookies
 logging.info("Загрузка cookies...")
-load_cookies(driver, "cookies.json")
+load_cookies(driver, "cookies.json", ".youtube.com")
 
-# Перезагрузка страницы для применения cookies
+# 3. Перезагружаем страницу
 logging.info("Обновление страницы для применения cookies...")
 driver.refresh()
 time.sleep(5)
 
-# Проверка авторизации
+# 4. Проверяем авторизацию
 logging.info("Проверка авторизации...")
 try:
-    avatar = WebDriverWait(driver, 10).until(
+    WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, '//button[@id="avatar-btn"]'))
     )
     logging.info("Авторизация успешна!")
@@ -98,32 +88,37 @@ except TimeoutException:
     driver.quit()
     exit()
 
-# Переход в чат и отправка сообщения
-logging.info("Поиск iframe чата...")
+# 5. Открываем случайное видео
+logging.info("Поиск списка видео...")
 try:
-    chat_iframe = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.XPATH, '//iframe[@id="chatframe"]'))
+    videos = WebDriverWait(driver, 10).until(
+        EC.presence_of_all_elements_located((By.XPATH, '//a[@id="thumbnail" and @href]'))
     )
-    driver.switch_to.frame(chat_iframe)
+    video_urls = [video.get_attribute("href") for video in videos if video.get_attribute("href")]
+    
+    if not video_urls:
+        logging.error("Видео не найдены!")
+        driver.quit()
+        exit()
 
-    logging.info("Поиск поля ввода чата...")
-    comment_box = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.XPATH, '//div[@id="input"]'))
-    )
+    random_video = random.choice(video_urls)
+    logging.info(f"Открываем случайное видео: {random_video}")
+    driver.get(random_video)
+    time.sleep(5)
 
-    if comment_box.is_displayed() and comment_box.is_enabled():
-        logging.info("Поле чата найдено. Отправка сообщения...")
-        comment_box.click()
-        comment_box.send_keys("test")
-        comment_box.send_keys(Keys.RETURN)
-        logging.info("Сообщение отправлено!")
-    else:
-        logging.error("Поле чата неактивно!")
+    # 6. Ставим лайк
+    logging.info("Попытка поставить лайк...")
+    try:
+        like_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//button[@id="like-button"]'))
+        )
+        like_button.click()
+        logging.info("Лайк поставлен!")
+    except TimeoutException:
+        logging.error("Не удалось найти кнопку лайка!")
 except TimeoutException:
-    logging.error("Не найден iframe чата или поле ввода!")
-except NoSuchElementException:
-    logging.error("Элемент не найден в чате!")
+    logging.error("Ошибка загрузки видео!")
 
 # Завершение работы
-logging.info("Тест завершён.")
+logging.info("Завершение работы...")
 driver.quit()
