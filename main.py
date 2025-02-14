@@ -32,6 +32,8 @@ def load_cookies(driver, cookies_file):
             for cookie in data["cookies"]:
                 if "name" in cookie and "value" in cookie:
                     cookie["domain"] = ".youtube.com"
+                    if "sameSite" not in cookie or cookie["sameSite"] not in ["Strict", "Lax", "None"]:
+                        cookie["sameSite"] = "Lax"  # Исправляем значение
                     driver.add_cookie(cookie)
             logging.info("Cookies загружены.")
     except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
