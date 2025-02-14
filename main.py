@@ -53,17 +53,20 @@ def load_cookies(driver, cookies_file, domain):
                 raise ValueError("Неверный формат cookies.json!")
 
             for cookie in data["cookies"]:
-                if "domain" in cookie and domain not in cookie["domain"]:
-                    continue
+                # Проверяем, что домен совпадает или является поддоменом
+                cookie_domain = cookie.get("domain", "")
+                if not cookie_domain.startswith("."):
+                    cookie_domain = "." + cookie_domain  # Делаем домен универсальным
 
-                driver.add_cookie({
-                    "name": cookie["name"],
-                    "value": cookie["value"],
-                    "domain": domain,
-                    "path": cookie.get("path", "/"),
-                    "secure": cookie.get("secure", False),
-                    "httpOnly": cookie.get("httpOnly", False),
-                })
+                if domain.endswith(cookie_domain) or cookie_domain.endswith(domain):
+                    driver.add_cookie({
+                        "name": cookie["name"],
+                        "value": cookie["value"],
+                        "domain": cookie_domain,
+                        "path": cookie.get("path", "/"),
+                        "secure": cookie.get("secure", False),
+                        "httpOnly": cookie.get("httpOnly", False),
+                    })
 
             logging.info("Cookies загружены успешно.")
     except FileNotFoundError:
