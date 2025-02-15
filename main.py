@@ -1,82 +1,54 @@
-import json
 import time
-import logging
-from selenium import webdriver
+import undetected_chromedriver.v2 as uc
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver.common.keys import Keys
+import logging
 
+# Setup logging
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-def create_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--window-size=1920x1080")
-    chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
-    )
+EMAIL = "poco870ily@gmail.com"
+PASSWORD = "Aa200733"
 
-    logging.info("Запуск WebDriver...")
-    return webdriver.Chrome(options=chrome_options)
+# Initialize undetected ChromeDriver
+options = uc.ChromeOptions()
+options.add_argument("--start-maximized")  
+options.add_argument("--disable-blink-features=AutomationControlled")
+options.add_argument("--disable-extensions")
+options.add_argument("--headless")  # Uncomment for headless mode
 
-def load_cookies(driver, cookies_file, domain=".youtube.com"):
-    try:
-        with open(cookies_file, "r") as file:
-            data = json.load(file)
-            if "cookies" not in data or not isinstance(data["cookies"], list):
-                raise ValueError("Неверный формат cookies.json!")
+driver = uc.Chrome(options=options)
 
-            valid_cookies = [cookie for cookie in data["cookies"] if domain in cookie.get("domain", "")]
-            if not valid_cookies:
-                raise ValueError(f"В файле нет куки для {domain}")
+try:
+    # Step 1: Open Google Sign-In Page
+    logging.info("Opening Google Sign-In page...")
+    driver.get("https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dru%26next%3D%252F")
+    
+    # Step 2: Enter Email
+    time.sleep(2)
+    email_input = driver.find_element(By.XPATH, '//*[@id="identifierId"]')
+    logging.info("Entering email...")
+    email_input.send_keys(EMAIL)
+    email_input.send_keys(Keys.ENTER)
 
-            driver.get(f"https://{domain.strip('.')}/")
-            time.sleep(2)
+    # Step 3: Wait for Password Field
+    time.sleep(3)
+    password_input = driver.find_element(By.XPATH, '/html/body/div[1]/div[1]/div[2]/c-wiz/div/div[2]/div/div/div/form/span/section[2]/div/div/div[1]/div[1]/div/div/div/div/div[1]/div/div[1]/input')
+    logging.info("Entering password...")
+    password_input.send_keys(PASSWORD)
+    password_input.send_keys(Keys.ENTER)
 
-            for cookie in valid_cookies:
-                cookie.pop("sameSite", None)  
-                driver.add_cookie(cookie)
-
-            logging.info("Cookies загружены.")
-    except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
-        logging.error(f"Ошибка загрузки cookies: {e}")
-
-def is_logged_in(driver):
-    try:
-        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "avatar-btn")))
-        return True
-    except TimeoutException:
-        return False
-
-def play_video(driver, url):
-    logging.info(f"Открытие видео: {url}")
-    driver.get(url)
+    # Step 4: Wait for login process to complete
     time.sleep(5)
+    logging.info("Login process completed.")
 
-    logging.info("Загрузка cookies...")
-    load_cookies(driver, "cookies.json")
-    driver.refresh()
-    time.sleep(5)
+    # Step 5: Navigate to YouTube
+    driver.get("https://www.youtube.com")
+    logging.info("Successfully logged in and navigated to YouTube!")
 
-    if is_logged_in(driver):
-        logging.info("Авторизован. Видео запущено.")
-    else:
-        logging.error("Авторизация не найдена.")
+except Exception as e:
+    logging.error(f"An error occurred: {str(e)}")
 
-    time.sleep(30)  # Даем видео проиграться 30 секунд
-
-while True:
-    try:
-        driver = create_driver()
-        play_video(driver, "https://www.youtube.com/watch?v=nq1GqSVQzeU")
-        break  # Если все прошло без ошибок — выходим из цикла
-    except WebDriverException as e:
-        logging.error(f"Ошибка WebDriver: {e}, перезапуск...")
-        time.sleep(5)
-    finally:
-        driver.quit()
+finally:
+    input("Press Enter to close the browser...")  # Keeps the browser open for review
+    driver.quit()
