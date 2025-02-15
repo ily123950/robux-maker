@@ -34,11 +34,11 @@ def load_cookies(driver, cookies_file, domain=".youtube.com"):
             if not valid_cookies:
                 raise ValueError(f"В файле нет куки для {domain}")
 
-            driver.get(f"https://{domain.strip('.')}/")  # Открываем нужный сайт перед установкой куков
+            driver.get(f"https://{domain.strip('.')}/")  
             time.sleep(2)
 
             for cookie in valid_cookies:
-                cookie.pop("sameSite", None)  # Удаляем sameSite, если оно некорректное
+                cookie.pop("sameSite", None)  
                 driver.add_cookie(cookie)
 
             logging.info("Cookies загружены.")
@@ -65,7 +65,9 @@ time.sleep(5)
 if is_logged_in(driver):
     logging.info("Авторизован, ставим лайк...")
     try:
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "like-button"))).click()
+        like_button_xpath = "/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[2]/ytd-watch-metadata/div/div[2]/div[2]/div/div/ytd-menu-renderer/div[1]/segmented-like-dislike-button-view-model/yt-smartimation/div/div/like-button-view-model/toggle-button-view-model/button-view-model/button/yt-touch-feedback-shape/div/div[2]"
+        
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, like_button_xpath))).click()
         logging.info("Лайк поставлен!")
     except TimeoutException:
         logging.error("Не удалось поставить лайк.")
