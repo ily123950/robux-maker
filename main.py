@@ -11,8 +11,8 @@ from selenium.common.exceptions import TimeoutException
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 chrome_options = Options()
-chrome_options.add_argument("--headless=new")  # Фоновый режим
-chrome_options.add_argument("--no-sandbox")  
+chrome_options.add_argument("--headless=new")
+chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 chrome_options.add_argument("--window-size=1920x1080")
@@ -23,18 +23,35 @@ chrome_options.add_argument(
 logging.info("Запуск WebDriver...")
 driver = webdriver.Chrome(options=chrome_options)
 
+def fix_cookies(cookies):
+    """Исправляет куки перед загрузкой в браузер"""
+    fixed_cookies = []
+    for cookie in cookies:
+        fixed_cookie = cookie.copy()
+        fixed_cookie.pop("sameSite", None)  # Удаляем параметр sameSite, если он есть
+        if "domain" in fixed_cookie and fixed_cookie["domain"].startswith("."):
+            fixed_cookie["domain"] = fixed_cookie["domain"][1:]  # Убираем ведущую точку
+        fixed_cookies.append(fixed_cookie)
+    return fixed_cookies
+
 def load_cookies(driver, cookies_file):
-    """Загружает куки из файла без изменений"""
+    """Загружает исправленные куки в браузер"""
     try:
         with open(cookies_file, "r") as file:
-            cookies = json.load(file)
-            driver.get("https://www.youtube.com")  
-            time.sleep(2)  
+            data = json.load(file)
+            if "cookies" in data:
+                cookies = data["cookies"]
+            else:
+                cookies = data
 
-            for cookie in cookies:
+            fixed_cookies = fix_cookies(cookies)
+            driver.get("https://www.youtube.com")  
+            time.sleep(2)
+
+            for cookie in fixed_cookies:
                 driver.add_cookie(cookie)
 
-            logging.info("Cookies загружены.")
+            logging.info("Cookies загружены и исправлены.")
     except Exception as e:
         logging.error(f"Ошибка загрузки cookies: {e}")
 
