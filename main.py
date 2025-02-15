@@ -23,18 +23,24 @@ chrome_options.add_argument(
 logging.info("Запуск WebDriver...")
 driver = webdriver.Chrome(options=chrome_options)
 
-def load_cookies(driver, cookies_file):
+def load_cookies(driver, cookies_file, domain=".youtube.com"):
     try:
         with open(cookies_file, "r") as file:
             data = json.load(file)
             if "cookies" not in data or not isinstance(data["cookies"], list):
                 raise ValueError("Неверный формат cookies.json!")
-            for cookie in data["cookies"]:
-                if "name" in cookie and "value" in cookie:
-                    cookie["domain"] = ".youtube.com"
-                    if "sameSite" not in cookie or cookie["sameSite"] not in ["Strict", "Lax", "None"]:
-                        cookie["sameSite"] = "Lax"  # Исправляем значение
-                    driver.add_cookie(cookie)
+
+            valid_cookies = [cookie for cookie in data["cookies"] if domain in cookie.get("domain", "")]
+            if not valid_cookies:
+                raise ValueError(f"В файле нет куки для {domain}")
+
+            driver.get(f"https://{domain.strip('.')}/")  # Открываем нужный сайт перед установкой куков
+            time.sleep(2)
+
+            for cookie in valid_cookies:
+                cookie.pop("sameSite", None)  # Удаляем sameSite, если оно некорректное
+                driver.add_cookie(cookie)
+
             logging.info("Cookies загружены.")
     except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
         logging.error(f"Ошибка загрузки cookies: {e}")
