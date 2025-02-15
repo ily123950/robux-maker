@@ -11,8 +11,8 @@ from selenium.common.exceptions import TimeoutException
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 chrome_options = Options()
-chrome_options.add_argument("--headless=new")
-chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--headless=new")  # Фоновый режим
+chrome_options.add_argument("--no-sandbox")  
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 chrome_options.add_argument("--window-size=1920x1080")
@@ -23,29 +23,23 @@ chrome_options.add_argument(
 logging.info("Запуск WebDriver...")
 driver = webdriver.Chrome(options=chrome_options)
 
-def load_cookies(driver, cookies_file, domain=".youtube.com"):
+def load_cookies(driver, cookies_file):
+    """Загружает куки из файла без изменений"""
     try:
         with open(cookies_file, "r") as file:
-            data = json.load(file)
-            if "cookies" not in data or not isinstance(data["cookies"], list):
-                raise ValueError("Неверный формат cookies.json!")
+            cookies = json.load(file)
+            driver.get("https://www.youtube.com")  
+            time.sleep(2)  
 
-            valid_cookies = [cookie for cookie in data["cookies"] if domain in cookie.get("domain", "")]
-            if not valid_cookies:
-                raise ValueError(f"В файле нет куки для {domain}")
-
-            driver.get(f"https://{domain.strip('.')}/")  
-            time.sleep(2)
-
-            for cookie in valid_cookies:
-                cookie.pop("sameSite", None)  
+            for cookie in cookies:
                 driver.add_cookie(cookie)
 
             logging.info("Cookies загружены.")
-    except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
+    except Exception as e:
         logging.error(f"Ошибка загрузки cookies: {e}")
 
 def is_logged_in(driver):
+    """Проверяет, залогинен ли пользователь"""
     try:
         WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "avatar-btn")))
         return True
@@ -65,8 +59,7 @@ time.sleep(5)
 if is_logged_in(driver):
     logging.info("Авторизован, ставим лайк...")
     try:
-        like_button_xpath = "/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[2]/ytd-watch-metadata/div/div[2]/div[2]/div/div/ytd-menu-renderer/div[1]/segmented-like-dislike-button-view-model/yt-smartimation/div/div/like-button-view-model/toggle-button-view-model/button-view-model/button/yt-touch-feedback-shape/div/div[2]"
-        
+        like_button_xpath = "//button[@aria-label='Нравится']"
         WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, like_button_xpath))).click()
         logging.info("Лайк поставлен!")
     except TimeoutException:
