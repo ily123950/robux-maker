@@ -8,19 +8,21 @@ RUN apt-get update && apt-get install -y \
     libcups2 libdbus-1-3 libgtk-3-0 --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# Установка Google Chrome (v124)
-RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
-    dpkg -i google-chrome*.deb || apt-get -fy install && \
-    rm google-chrome*.deb
+# Установка Chrome 122
+RUN wget https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.111/linux/x64/chrome-linux64.zip && \
+    unzip chrome-linux64.zip && \
+    mv chrome-linux64 /opt/chrome && \
+    ln -s /opt/chrome/chrome /usr/bin/google-chrome && \
+    rm chrome-linux64.zip
 
-# Установка ChromeDriver (v124.0.6367.91 — соответствует Chrome 124)
-RUN wget -q https://chromedriver.storage.googleapis.com/124.0.6367.91/chromedriver_linux64.zip && \
-    unzip chromedriver_linux64.zip && \
-    mv chromedriver /usr/local/bin/ && \
+# Установка ChromeDriver 122
+RUN wget https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.111/linux64/chromedriver-linux64.zip && \
+    unzip chromedriver-linux64.zip && \
+    mv chromedriver-linux64/chromedriver /usr/local/bin/ && \
     chmod +x /usr/local/bin/chromedriver && \
-    rm chromedriver_linux64.zip
+    rm -rf chromedriver-linux64.zip chromedriver-linux64
 
-# Установка Python зависимостей
+# Установка Python-библиотек
 WORKDIR /app
 COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
