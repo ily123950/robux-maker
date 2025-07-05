@@ -7,7 +7,7 @@ import os
 import json
 
 # 🔐 Telegram Bot Token (задать в Render как переменную окружения)
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_TOKEN = os.getenv("7841865896:AAEXPcW63zYfbNODVhhvH5QWdHCQAt_khHM")
 CHAT_ID_FILE = "chat_id.txt"
 
 if not TELEGRAM_TOKEN:
